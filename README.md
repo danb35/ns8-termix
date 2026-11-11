@@ -173,13 +173,18 @@ Some CLI commands are needed to debug the module.
 
 ## Testing
 
-Test the module using the `test-module.sh` script:
+The tests are made using [Robot Framework](https://robotframework.org/) and
+live in `tests/`. Every image published by the "Publish images" workflow is
+tested on QEMU virtual machines by the "Test module" workflow, through the
+shared [`test-module-qemu.yml`](https://github.com/NethServer/ns8-github-actions/blob/v1/docs/test-module-qemu.md)
+workflow:
 
-```bash
-./test-module.sh <NODE_ADDR> ghcr.io/geniusdynamics/termix:latest
-```
-
-The tests are made using [Robot Framework](https://robotframework.org/).
+- the `install` scenario installs the image under test on a clean node
+- the `update` scenario installs the previous release
+  (`ghcr.io/geniusdynamics/termix:latest`), then updates it to the image
+  under test
+- the UI tests take screenshots of the Status and Settings pages, which are
+  posted as a comment on the pull request
 
 ## UI Translation
 

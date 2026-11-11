@@ -15,6 +15,7 @@ repobase="${REPOBASE:-ghcr.io/geniusdynamics}"
 # Configure the image name
 reponame="termix"
 app_version="26.11.1"
+corepack_version=0.36.0
 
 # Create a new empty container image
 container=$(buildah from scratch)
@@ -22,7 +23,8 @@ container=$(buildah from scratch)
 # Reuse existing nodebuilder-termix container, to speed up builds
 if ! buildah containers --format "{{.ContainerName}}" | grep -q nodebuilder-termix; then
     echo "Pulling NodeJS runtime..."
-    buildah from --name nodebuilder-termix -v "${PWD}:/usr/src:Z" docker.io/library/node:24.22.2
+    buildah from --name nodebuilder-termix -v "${PWD}:/usr/src:Z" docker.io/library/node:26.13.0-slim
+    buildah run nodebuilder-termix sh -c "npm install -g corepack@${corepack_version} && corepack enable"
 fi
 
 echo "Build static UI files with node..."
