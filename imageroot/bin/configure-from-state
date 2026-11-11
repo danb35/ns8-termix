@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# Run configure-module with every setting of the original instance: the
+# Traefik ones from the environment, the OIDC ones from termix.env. Used by
+# restore-module and clone-module, after those files have been copied over.
+#
+
+import os
+import agent
+import agent.tasks
+
+# configure-module input field -> termix.env variable
+OIDC_FIELDS = {
+    "oidc_client_id": "OIDC_CLIENT_ID",
+    "oidc_client_secret": "OIDC_CLIENT_SECRET",
+    "oidc_issuer_url": "OIDC_ISSUER_URL",
+    "oidc_authorization_url": "OIDC_AUTHORIZATION_URL",
+    "oidc_token_url": "OIDC_TOKEN_URL",
+    "oidc_userinfo_url": "OIDC_USERINFO_URL",
+    "oidc_identifier_path": "OIDC_IDENTIFIER_PATH",
+    "oidc_name_path": "OIDC_NAME_PATH",
+    "oidc_scopes": "OIDC_SCOPES",
+}
+
+data = {
+    "host": os.environ["TRAEFIK_HOST"],
+    "http2https": os.environ.get("TRAEFIK_HTTP2HTTPS") == "True",
+    "lets_encrypt": os.environ.get("TRAEFIK_LETS_ENCRYPT") == "True",
+}
+
+if os.path.exists("termix.env"):
+    termix_env = agent.read_envfile("termix.env")
+    for field, evar in OIDC_FIELDS.items():
+        # Leave empty values out: the URL fields must be valid URIs
+        if termix_env.get(evar):
+            data[field] = termix_env[evar]
+
+result = agent.tasks.run(
+    agent_id=os.environ["AGENT_ID"],
+    action="configure-module",
+    data=data,
+)
+agent.assert_exp(result["exit_code"] == 0, "The configure-module subtask failed!")

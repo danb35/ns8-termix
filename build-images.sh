@@ -14,7 +14,7 @@ images=()
 repobase="${REPOBASE:-ghcr.io/geniusdynamics}"
 # Configure the image name
 reponame="termix"
-app_version="release-2.5.0"
+app_version="26.11.1"
 
 # Create a new empty container image
 container=$(buildah from scratch)
@@ -22,7 +22,7 @@ container=$(buildah from scratch)
 # Reuse existing nodebuilder-termix container, to speed up builds
 if ! buildah containers --format "{{.ContainerName}}" | grep -q nodebuilder-termix; then
     echo "Pulling NodeJS runtime..."
-    buildah from --name nodebuilder-termix -v "${PWD}:/usr/src:Z" docker.io/library/node:lts
+    buildah from --name nodebuilder-termix -v "${PWD}:/usr/src:Z" docker.io/library/node:24.22.2
 fi
 
 echo "Build static UI files with node..."
@@ -46,7 +46,7 @@ buildah config --entrypoint=/ \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
-    --label="org.nethserver.images=ghcr.io/lukegus/termix:${app_version}" \
+    --label="org.nethserver.images=ghcr.io/termix-ssh/termix:${app_version}" \
     "${container}"
 # Commit the image
 buildah commit "${container}" "${repobase}/${reponame}"

@@ -4,22 +4,24 @@
 #
 
 [Unit]
-Description=Podman  termix-app.service
+Description=Podman termix-app.service
 BindsTo=termix.service
 After=termix.service
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n
 EnvironmentFile=%S/state/environment
-EnvironmentFile=-%S/state/smarthost.env
 WorkingDirectory=%S/state
 Restart=always
 TimeoutStopSec=70
+# The first start after the 26.x update may migrate old data, see bin/prepare-termix-data
+TimeoutStartSec=1200
 ExecStartPre=/bin/mkdir -p tmp
 ExecStartPre=/bin/rm -f %t/termix-app.pid %t/termix-app.ctr-id
-ExecStartPre=-runagent discover-smarthost
-ExecStart=/usr/bin/podman run --conmon-pidfile %t/termix-app.pid  --cidfile %t/termix-app.ctr-id --cgroups=no-conmon  --pod-id-file %t/termix.pod-id --replace -d --name  termix-app  --volume termix-data:/app/data:Z   --env-file termix.env  ${TERMIX_IMAGE}  
-ExecStop=/usr/bin/podman stop --ignore --cidfile %t/termix-app.ctr-id -t 10
+ExecStartPre=runagent prepare-termix-data
+ExecStart=/usr/bin/podman run --conmon-pidfile %t/termix-app.pid --cidfile %t/termix-app.ctr-id --cgroups=no-conmon --pod-id-file %t/termix.pod-id --replace -d --name termix-app --volume termix-data:/app/data:Z --env-file termix.env ${TERMIX_IMAGE}
+# Termix saves its in-memory database to disk on SIGTERM
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/termix-app.ctr-id -t 30
 ExecReload=/usr/bin/podman kill -s HUP termix-app
 SyslogIdentifier=%u
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/termix-app.ctr-id

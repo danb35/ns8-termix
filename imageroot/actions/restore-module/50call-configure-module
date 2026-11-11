@@ -1,0 +1,9 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+# Reconfigure with all the settings copied from the original instance
+exec configure-from-state

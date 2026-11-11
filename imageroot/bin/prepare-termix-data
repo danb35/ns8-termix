@@ -1,0 +1,88 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2026 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# Prepare the termix-data volume before the Termix container starts.
+#
+# Termix 26.10.0 and later refuse to open a database written by Termix 2.8
+# or older: it must be opened once by Termix 2.9 so that release can move its
+# data. Every data volume created by this module before the 26.x update holds
+# a Termix 1.x database, so it is started once with a 2.9 bridge image.
+#
+# A marker file inside the volume records that the data is ready for the
+# current release. The marker travels with the volume, so it is honored on
+# update, restore (also from an old backup), clone and move.
+#
+
+set -e -o pipefail
+
+# Redirect any output to the journal (stderr)
+exec 1>&2
+
+volume="termix-data"
+marker=".ns8-termix-ready-v26"
+bridge_image="ghcr.io/lukegus/termix:2.9.2"
+bridge_name="termix-bridge"
+ready_message="Termix backend started successfully"
+
+if ! podman volume exists "${volume}"; then
+    podman volume create "${volume}" >/dev/null
+fi
+mountpoint=$(podman volume inspect --format '{{.Mountpoint}}' "${volume}")
+
+if podman unshare test -e "${mountpoint}/${marker}"; then
+    exit 0
+fi
+
+if ! podman unshare test -e "${mountpoint}/db.sqlite.encrypted" &&
+   ! podman unshare test -e "${mountpoint}/db.sqlite"; then
+    # No database yet: the current release creates it from scratch
+    podman unshare touch "${mountpoint}/${marker}"
+    exit 0
+fi
+
+echo "Termix data predates release 2.9: running ${bridge_image} once to migrate it"
+
+cleanup() {
+    podman rm --ignore --force "${bridge_name}" >/dev/null || :
+}
+trap cleanup EXIT
+trap 'exit 1' INT TERM
+
+# The default journald log driver is not readable with "podman logs" by a
+# rootless module: keep the bridge logs in a file, they are polled below
+podman run --detach --replace --name "${bridge_name}" \
+    --log-driver=k8s-file \
+    --network=none \
+    --volume "${volume}:/app/data:Z" \
+    "${bridge_image}" >/dev/null
+
+started=0
+for _ in $(seq 1 180); do
+    if podman logs "${bridge_name}" 2>&1 | grep -qF "${ready_message}"; then
+        started=1
+        break
+    fi
+    if [[ "$(podman inspect --format '{{.State.Running}}' "${bridge_name}")" != "true" ]]; then
+        break
+    fi
+    sleep 5
+done
+
+# SIGTERM makes Termix save its in-memory database to disk before exiting
+podman stop --time 60 "${bridge_name}" >/dev/null || :
+
+if [[ "${started}" != 1 ]]; then
+    echo "Termix 2.9 bridge did not start, data migration failed. Last log lines:"
+    podman logs --tail 50 "${bridge_name}" 2>&1 || :
+    exit 1
+fi
+
+podman unshare touch "${mountpoint}/${marker}"
+cleanup
+podman rmi --ignore "${bridge_image}" >/dev/null 2>&1 || :
+echo "Termix data migrated through release 2.9"

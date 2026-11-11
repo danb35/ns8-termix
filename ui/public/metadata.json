@@ -12,8 +12,8 @@
 	],
 	"docs": {
 		"documentation_url": "https://docs.termix.site/",
-		"bug_url": "https://github.com/geniusdynamics/dev",
-		"code_url": "https://github.com/eniusdynamics/ns8-termix"
+		"bug_url": "https://github.com/geniusdynamics/ns8-termix/issues",
+		"code_url": "https://github.com/geniusdynamics/ns8-termix"
 	},
 	"source": "ghcr.io/geniusdynamics/termix"
 }
