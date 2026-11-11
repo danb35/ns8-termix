@@ -46,25 +46,53 @@
             "type": "string",
             "title": "OIDC Issuer URL",
             "description": "The issuer URL for OIDC authentication",
-            "format": "uri"
+            "anyOf": [
+                {
+                    "format": "uri"
+                },
+                {
+                    "maxLength": 0
+                }
+            ]
         },
         "oidc_authorization_url": {
             "type": "string",
             "title": "OIDC Authorization URL",
             "description": "The authorization endpoint URL for OIDC authentication",
-            "format": "uri"
+            "anyOf": [
+                {
+                    "format": "uri"
+                },
+                {
+                    "maxLength": 0
+                }
+            ]
         },
         "oidc_token_url": {
             "type": "string",
             "title": "OIDC Token URL",
             "description": "The token endpoint URL for OIDC authentication",
-            "format": "uri"
+            "anyOf": [
+                {
+                    "format": "uri"
+                },
+                {
+                    "maxLength": 0
+                }
+            ]
         },
         "oidc_userinfo_url": {
             "type": "string",
             "title": "OIDC Userinfo URL",
             "description": "The userinfo endpoint URL for OIDC authentication (optional)",
-            "format": "uri"
+            "anyOf": [
+                {
+                    "format": "uri"
+                },
+                {
+                    "maxLength": 0
+                }
+            ]
         },
         "oidc_identifier_path": {
             "type": "string",
